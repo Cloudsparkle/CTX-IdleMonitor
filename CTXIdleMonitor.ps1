@@ -1,8 +1,8 @@
 <#
 .SYNOPSIS
-  Monitor and log off disconnected sessions of specific apps accross multiple sites
+  Monitor and log off idle sessions of specific apps accross multiple sites
 .DESCRIPTION
-  For specific published applications, monitor for disconnected sessions and when found log off
+  For specific published applications, monitor for idle sessions and when found log off
 .INPUTS
   Ini file containing DDC and application list
 .OUTPUTS
@@ -10,8 +10,8 @@
 .NOTES
   Version:        1.0
   Author:         Bart Jacobs - @Cloudsparkle
-  Creation Date:  15/03/2022
-  Purpose/Change: Monitor disconnected sessions
+  Creation Date:  17/06/2022
+  Purpose/Change: Monitor and log off idle sessions of specific apps
  .EXAMPLE
   None
 #>
@@ -154,16 +154,16 @@ while ($true)
   $DDCList = $IniFile.Keys
   foreach ($DDC in $DDCList)
   {
-    Write-Host "Getting all disconnected sessions from" $DDC"..."
-    $DisconnectedSessions = Get-BrokerSession -MaxRecordCount 10000 -AdminAddress $DDC -SessionState Disconnected
+    Write-Host "Getting all Idle sessions from" $DDC"..."
+    $IdleSessions = (Get-BrokerSession -AdminAddress $DDC -DesktopGroupName $Current_CTX_DG.name -MaxRecordCount 20000 | where idleduration -GT 00:00:00)
     $CTXAppList = $IniFile[$DDC].Keys
 
-    foreach ($DisconnectedSession in $DisconnectedSessions)
+    foreach ($IdleSession in $IdleSessions)
     {
       foreach ($CTXApp in $CTXAppList)
       {
         $CTXAppToLookFor = ($IniFile[$DDC][$CTXApp]).Trim()
-        $PublishedApps = $DisconnectedSession.ApplicationsInUse
+        $PublishedApps = $IdleSession.ApplicationsInUse
         foreach ($PublishedApp in $PublishedApps)
         {
           $PublishedAppSplit = $PublishedApp.Split("\")
@@ -171,8 +171,8 @@ while ($true)
 
           if ($PublishedAppName -eq $CTXAppToLookFor)
           {
-            Write-Host $IniFile[$DDC][$CTXApp] "has a disconnected session for" ($DisconnectedSession.UserFullName).trim()". Logging off." -ForegroundColor Green
-            Stop-BrokerSession $disconnectedsession
+            Write-Host $IniFile[$DDC][$CTXApp] "has a Idle session for" ($IdleSession.UserFullName).trim()". Logging off." -ForegroundColor Green
+            Stop-BrokerSession $Idlesession
           }
         }
       }
